@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Estate Labour Ledger</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2F3B2C">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --paper:#F3EEE1;
+    --paper-dark:#EAE2CD;
+    --ink:#2E2418;
+    --ink-soft:#6B5D48;
+    --green:#2F3B2C;
+    --green-light:#3F4F3A;
+    --gold:#B9862F;
+    --gold-light:#E3C57C;
+    --rust:#A0402C;
+    --rust-bg:#F3DCD4;
+    --line:#D8CCAE;
+    --white:#FFFDF7;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 60px;}
+
+  /* header */
+  header.top{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:3px solid var(--green);
+    padding-bottom:16px;margin-bottom:22px;flex-wrap:wrap;gap:14px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:42px;height:42px;border-radius:50%;
+    background:var(--green);color:var(--gold-light);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif;font-weight:700;font-size:19px;
+  }
+  h1{font-family:'Fraunces',serif;font-weight:600;font-size:26px;margin:0;color:var(--green);letter-spacing:.2px;}
+  .sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .week-badge{
+    font-family:'JetBrains Mono',monospace;font-size:13px;
+    background:var(--green);color:var(--white);
+    padding:8px 14px;border-radius:3px;
+  }
+
+  /* tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:18px;}
+  .tab{
+    padding:9px 18px;font-size:13.5px;font-weight:600;cursor:pointer;
+    border-radius:4px 4px 0 0;color:var(--ink-soft);
+    border:1px solid transparent;border-bottom:none;
+  }
+  .tab.active{background:var(--white);color:var(--green);border-color:var(--line);}
+  .week-info-bar{
+    font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--ink-soft);
+    background:var(--paper-dark);border:1px solid var(--line);border-radius:4px;
+    padding:8px 14px;margin-bottom:18px;
+  }
+  .week-info-bar b{color:var(--green);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .card{
+    background:var(--white);border:1px solid var(--line);border-radius:6px;
+    padding:20px;margin-bottom:20px;
+  }
+  .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .card-head h2{font-family:'Fraunces',serif;font-size:17px;margin:0;color:var(--green);font-weight:600;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    background:var(--green);color:var(--white);font-weight:600;
+    padding:9px 8px;text-align:center;white-space:nowrap;font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.4px;
+  }
+  thead th.left{text-align:left;}
+  th .day-name{font-weight:700;}
+  th .day-date{display:block;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;opacity:.8;margin-top:2px;font-family:'JetBrains Mono',monospace;}
+  tbody td{padding:6px 6px;border-bottom:1px solid var(--paper-dark);text-align:center;}
+  tbody tr:nth-child(even){background:var(--paper);}
+  tbody td.name{text-align:left;font-weight:600;color:var(--ink);white-space:nowrap;}
+  tbody td.readonly{color:var(--ink-soft);font-family:'JetBrains Mono',monospace;font-size:12.5px;}
+  tbody td.closing{font-weight:700;color:var(--green);background:#E6EEE1;font-family:'JetBrains Mono',monospace;}
+  tbody tr.neg td.closing{background:var(--rust-bg);color:var(--rust);}
+
+  input.cell{
+    width:64px;padding:5px 4px;border:1px solid var(--line);border-radius:3px;
+    text-align:center;font-size:12.5px;font-family:'JetBrains Mono',monospace;
+    background:var(--paper);
+  }
+  input.cell.day{width:46px;}
+  input.cell:focus{outline:2px solid var(--gold);background:var(--white);}
+  input.cell.money{width:82px;}
+
+  tfoot td{font-weight:700;padding:9px 6px;border-top:2px solid var(--green);background:var(--paper-dark);font-family:'JetBrains Mono',monospace;font-size:12.5px;text-align:center;}
+  tfoot td.name{text-align:left;font-family:'Fraunces',serif;font-size:13px;}
+
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;cursor:pointer;
+    border-radius:4px;padding:9px 16px;border:1px solid transparent;
+  }
+  .btn-primary{background:var(--green);color:var(--white);}
+  .btn-primary:hover{background:var(--green-light);}
+  .btn-gold{background:var(--gold);color:var(--white);}
+  .btn-gold:hover{background:#a3781f;}
+  .btn-ghost{background:transparent;border-color:var(--line);color:var(--ink-soft);}
+  .btn-ghost:hover{border-color:var(--green);color:var(--green);}
+  .btn-danger{background:transparent;color:var(--rust);border-color:var(--rust-bg);font-size:12px;padding:5px 10px;}
+
+  .rate-strip{
+    display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-soft);
+  }
+  .rate-strip input{
+    width:56px;padding:5px 6px;border:1px solid var(--gold);border-radius:3px;
+    background:var(--gold-light);font-weight:700;text-align:center;font-family:'JetBrains Mono',monospace;
+  }
+
+  .empty{padding:30px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+  .history-item{border:1px solid var(--line);border-radius:5px;margin-bottom:10px;overflow:hidden;}
+  .history-head{
+    padding:11px 16px;background:var(--paper);display:flex;justify-content:space-between;
+    align-items:center;cursor:pointer;font-weight:600;font-size:13.5px;
+  }
+  .history-head .stats{font-family:'JetBrains Mono',monospace;font-weight:400;font-size:12px;color:var(--ink-soft);}
+  .history-body{display:none;padding:14px 16px;border-top:1px solid var(--line);}
+  .history-body.open{display:block;}
+
+  .worker-row{
+    display:grid;grid-template-columns:1.6fr 1fr 1fr auto;gap:10px;align-items:center;
+    padding:9px 0;border-bottom:1px solid var(--paper-dark);
+  }
+  .worker-row input{
+    padding:6px 8px;border:1px solid var(--line);border-radius:3px;font-size:13px;
+    font-family:'JetBrains Mono',monospace;width:100%;
+  }
+  .worker-row label{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:2px;}
+  .add-worker{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .add-worker input{padding:8px 10px;border:1px solid var(--line);border-radius:4px;font-size:13px;}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+    background:var(--green);color:var(--white);padding:11px 20px;border-radius:5px;
+    font-size:13px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.2);
+    opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(30,24,15,.45);display:none;align-items:center;justify-content:center;z-index:40;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--white);border-radius:8px;padding:22px;max-width:520px;width:92%;max-height:80vh;overflow:auto;}
+  .modal h3{font-family:'Fraunces',serif;color:var(--green);margin-top:0;}
+  .modal pre{white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:12.5px;background:var(--paper);padding:14px;border-radius:5px;line-height:1.6;}
+  .modal-actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end;}
+
+  .flag{font-size:11px;color:var(--rust);font-weight:600;margin-top:4px;}
+
+  td.work-col{
+    min-width:190px;max-width:230px;text-align:left;vertical-align:top;
+    padding:8px 10px;
+  }
+  th.work-col{text-align:left;min-width:190px;}
+  td.spacer-col, th.spacer-col{
+    padding:0;width:22px;min-width:22px;border-top:none;border-bottom:none;
+    background:var(--paper);
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;min-height:0;}
+  .chips-inline{min-height:0;}
+  .chip{
+    background:var(--gold-light);color:#5C3E0A;border-radius:12px;
+    padding:3px 8px 3px 10px;font-size:11px;display:inline-flex;align-items:center;gap:5px;
+    white-space:nowrap;
+  }
+  .chip button{
+    background:none;border:none;cursor:pointer;color:#5C3E0A;font-weight:700;
+    font-size:12px;line-height:1;padding:0;
+  }
+  .wp-toggle{width:100%;padding:5px 6px;font-size:11px;text-align:left;}
+  .work-panel{
+    position:relative;margin-top:6px;border:1px solid var(--line);border-radius:5px;
+    background:var(--white);box-shadow:0 4px 14px rgba(0,0,0,.12);padding:6px;z-index:5;
+  }
+  .work-panel-list{max-height:170px;overflow-y:auto;}
+  .work-panel-item{
+    display:flex;align-items:center;gap:4px;padding:5px 4px;border-radius:3px;
+  }
+  .work-panel-item:hover{background:var(--paper);}
+  .work-name{flex:1;font-size:11.5px;cursor:pointer;color:var(--ink);}
+  .wp-icon{
+    background:none;border:none;cursor:pointer;font-size:12px;padding:2px 4px;
+    line-height:1;border-radius:3px;color:var(--ink-soft);
+  }
+  .wp-icon:hover{background:var(--paper-dark);}
+  .wp-trash:hover{color:var(--rust);}
+  .work-panel-add{display:flex;gap:5px;margin-top:6px;padding-top:6px;border-top:1px solid var(--paper-dark);}
+  .wp-add-input{
+    flex:1;padding:5px 6px;border:1px solid var(--line);border-radius:4px;font-size:11.5px;
+  }
+  td.name .wp-icon{font-size:11px;vertical-align:middle;}
+  footer{text-align:center;color:var(--ink-soft);font-size:11.5px;margin-top:30px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark">CE</div>
+      <div>
+        <h1>Estate Labour Ledger</h1>
+        <div class="sub">Attendance, wages &amp; advance tracking — Chikmagalur</div>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div class="week-badge" id="weekBadge">Week of —</div>
+      <div id="syncStatus" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#9FD3A0;margin-top:5px;">● Local only</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="week">This Week</div>
+    <div class="tab" data-tab="history">History</div>
+  </div>
+  <div id="weekInfoBar" class="week-info-bar"></div>
+
+  <!-- THIS WEEK -->
+  <div class="panel active" id="panel-week">
+    <div class="card">
+      <div class="card-head">
+        <h2>Attendance &amp; Advance — Current Week</h2>
+        <div class="rate-strip">
+          Interest rate <input type="number" id="rateInput" step="0.1"> %
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="weekTable">
+          <thead>
+            <tr id="weekHeadRow"></tr>
+          </thead>
+          <tbody id="weekBody"></tbody>
+          <tfoot id="weekFoot"></tfoot>
+        </table>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+        <button class="btn btn-gold" id="btnSummary">Generate WhatsApp Summary</button>
+        <button class="btn btn-primary" id="btnSaveWeek">Save Week &amp; Start Next Week</button>
+      </div>
+      <div class="flag" id="dupFlag" style="display:none;">Enter either Paid or Extra Advance per worker — not both in the same week.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Add New Labour</h2></div>
+      <div class="add-worker">
+        <input id="quickName" placeholder="Worker or group name">
+        <input id="quickRate" placeholder="Rate / day (₹)" type="number">
+        <input id="quickOpening" placeholder="Opening balance (₹) — 0 if new" type="number">
+        <button class="btn btn-primary" id="btnQuickAdd">Add to This Week</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="panel" id="panel-history">
+    <div class="card">
+      <div class="card-head">
+        <h2>Saved Weeks</h2>
+        <span style="font-size:11.5px;color:var(--ink-soft);" id="historyCount"></span>
+      </div>
+      <div id="historyList"><div class="empty">No weeks saved yet. Use "Save Week &amp; Start Next Week" once you're done entering this week.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Backup &amp; Restore</h2></div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:0;">
+        Data auto-saves in this app, but download a backup file regularly and drop it into your Google Drive
+        (or anywhere safe) so a full year of history is never at risk of being lost.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-gold" id="btnExport">Download Backup (.json)</button>
+        <label class="btn btn-ghost" style="cursor:pointer;">
+          Restore from Backup
+          <input type="file" id="importFile" accept=".json" style="display:none;">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <footer>Data is saved automatically in this chat's storage — it will be here next time you open this app. Download a backup from the History tab for extra safety.</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Weekly Summary</h3>
+    <pre id="modalText"></pre>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCloseModal">Close</button>
+      <button class="btn btn-gold" id="btnCopy">Copy Text</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="renameModalBg">
+  <div class="modal">
+    <h3>Rename Work Type</h3>
+    <input class="note-input" id="renameModalInput" style="width:100%;margin-top:8px;padding:9px 10px;">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancelRename">Cancel</button>
+      <button class="btn btn-primary" id="btnConfirmRename">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="confirmModalBg">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirm</h3>
+    <p id="confirmMessage" style="font-size:13.5px;color:var(--ink-soft);"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnConfirmNo">Cancel</button>
+      <button class="btn btn-primary" id="btnConfirmYes">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== PASTE YOUR FIREBASE CONFIG HERE (from Firebase Console > Project Settings) ======
+const firebaseConfig = {
+  apiKey: "AIzaSyCh7bx-kIM7VCKCGDWg0xXiLEDyDybwqh8",
+  authDomain: "estate-ledger-302902.firebaseapp.com",
+  projectId: "estate-ledger-302902",
+  storageBucket: "estate-ledger-302902.firebasestorage.app",
+  messagingSenderId: "780303140907",
+  appId: "1:780303140907:web:58c0571b5758999c97426e"
+};
+let db = null;
+let cloudReady = false;
+try{
+  if(firebaseConfig.apiKey !== "YOUR_API_KEY"){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    cloudReady = true;
+  }
+}catch(e){ console.warn('Firebase init failed, running in local-only mode.', e); }
+// ==========================================================================================
+
+const DAY_KEYS = ['sun','mon','tue','wed','thu','fri','sat'];
+const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const STORAGE_KEY = 'estate-ledger-data';
+const DEFAULT_WORK_TYPES = [
+  'Coffee Picking','Coffee Spray','Pepper Spray','Coffee Planting','Halvana Planting',
+  'Pepper Planting','Silver Planting','Areca Planting','Dul Agathe','Margasi',
+  'Clean Drainage','Weeding Manual','Weeding Machine','Kana Cleaning',
+  'Coffee Pulping','Coffee Bade Kubkodhu','Pepper Mudding','Pepper Tie',
+  'Organic Manure','NPK Manure','Jolgasi','Wood Cutting','Fence Cleaning and Fix',
+  'Sprinkler','Gardening','Lindane','Pepper Picking','Others'
+];
+
+let state = null;
+let memoryFallback = {};
+let confirmCallback = null;
+let renameOldName = null;
+
+function defaultState(){
+  return {
+    interestRate: 0.02,
+    weekStart: mostRecentSundayISO(),
+    workers: [
+      {id:'chandra', name:'Chandra', rate:600, opening:4557},
+      {id:'swamy', name:'Swamy', rate:600, opening:2288},
+      {id:'raja', name:'Raja', rate:600, opening:15000},
+      {id:'dharma', name:'Dharma', rate:600, opening:44450},
+      {id:'manja', name:'Manja', rate:270, opening:36725},
+      {id:'nagesh', name:'Nagesh', rate:600, opening:5977},
+      {id:'ravi', name:'Ravi', rate:600, opening:47700},
+      {id:'naveen', name:'Naveen', rate:500, opening:131591},
+      {id:'pavitra', name:'Pavitra', rate:400, opening:0},
+      {id:'handi', name:'Handi', rate:700, opening:0},
+      {id:'belur', name:'Belur (group)', rate:500, opening:28800},
+      {id:'vanitha', name:'Vanitha', rate:500, opening:0},
+      {id:'gayatri', name:'Gayatri', rate:500, opening:0},
+    ],
+    current: {}, // workerId -> {sun..sat, paid, extra, rate, works[], note}
+    history: [],  // [{weekStart, weekEnd, rows:[{id,name,rate,days,wage,opening,interest,paid,extra,closing,works,note}]}]
+    workTypes: DEFAULT_WORK_TYPES.slice()
+  };
+}
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function toLocalISO(date){
+  return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`;
+}
+function fromLocalISO(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  return new Date(y, m-1, d); // local midnight, no UTC conversion
+}
+function todayISO(){ return toLocalISO(new Date()); }
+function mostRecentSundayISO(){
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay());
+  return toLocalISO(d);
+}
+function isoWeekNumber(date){
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayNum = (d.getDay() + 6) % 7; // Mon=0..Sun=6
+  d.setDate(d.getDate() - dayNum + 3); // nearest Thursday
+  const firstThursday = new Date(d.getFullYear(), 0, 4);
+  const firstDayNum = (firstThursday.getDay() + 6) % 7;
+  firstThursday.setDate(firstThursday.getDate() - firstDayNum + 3);
+  const weekNum = 1 + Math.round((d - firstThursday) / (7*24*60*60*1000));
+  return {week: weekNum, year: d.getFullYear()};
+}
+
+function ordinalSuffix(n){
+  if(n>=11 && n<=13) return 'th';
+  switch(n%10){case 1:return 'st'; case 2:return 'nd'; case 3:return 'rd'; default:return 'th';}
+}
+function dayDateLabel(date){
+  const d = date.getDate();
+  const month = date.toLocaleDateString('en-IN',{month:'long'});
+  const yr = date.getFullYear().toString().slice(-2);
+  return `${d}${ordinalSuffix(d)} ${month} ${yr}`;
+}
+function weekDates(weekStartISO){
+  const start = fromLocalISO(weekStartISO);
+  return DAY_KEYS.map((_,i)=>{ const d = new Date(start); d.setDate(d.getDate()+i); return d; });
+}
+
+function emptyEntry(rate){
+  const e = {paid:0, extra:0, rate: rate||0, works:[], note:''};
+  DAY_KEYS.forEach(d => e[d] = 0);
+  return e;
+}
+
+let syncTimer = null;
+let cloudDocRef = null;
+if(cloudReady){ cloudDocRef = db.collection('estateLedger').doc('mainData'); }
+
+function setSyncStatus(text, isError){
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  el.textContent = text;
+  el.style.color = isError ? '#E3C57C' : '#9FD3A0';
+}
+
+async function storageGet(key){
+  // Try the cloud first (source of truth across devices)
+  if(cloudReady && cloudDocRef){
+    try{
+      setSyncStatus('● Syncing…');
+      const doc = await cloudDocRef.get();
+      if(doc.exists){
+        const data = doc.data();
+        if(data && data.json){
+          const parsed = JSON.parse(data.json);
+          try{ window.localStorage.setItem(key, data.json); }catch(e){}
+          setSyncStatus('● Synced');
+          return parsed;
+        }
+      }
+      setSyncStatus('● Synced (new)');
+    }catch(e){
+      console.warn('Cloud read failed, using local copy.', e);
+      setSyncStatus('● Offline (local copy)', true);
+    }
+  }
+  // Fallback: local cache (works offline, or if cloud isn't configured)
+  try{
+    if(window.localStorage){
+      const v = window.localStorage.getItem(key);
+      if(v !== null) return JSON.parse(v);
+    }
+  }catch(e){ /* localStorage unavailable (e.g. private/incognito mode) */ }
+  return memoryFallback[key] || null;
+}
+
+async function storageSet(key, value){
+  const json = JSON.stringify(value);
+  // Save locally immediately — instant, always works, protects against connectivity gaps
+  try{ window.localStorage.setItem(key, json); }
+  catch(e){ memoryFallback[key] = value; }
+
+  if(!cloudReady || !cloudDocRef) return;
+  // Debounce cloud writes so rapid typing doesn't spam Firestore
+  clearTimeout(syncTimer);
+  setSyncStatus('● Saving…');
+  syncTimer = setTimeout(async ()=>{
+    try{
+      await cloudDocRef.set({ json, updatedAt: new Date().toISOString() });
+      setSyncStatus('● Synced');
+    }catch(e){
+      console.warn('Cloud save failed — data is still safe locally.', e);
+      setSyncStatus('● Offline (saved locally)', true);
+    }
+  }, 700);
+}
+
+async function loadState(){
+  const saved = await storageGet(STORAGE_KEY);
+  state = saved || defaultState();
+  if(!state.workTypes) state.workTypes = DEFAULT_WORK_TYPES.slice();
+  state.workers.forEach(w => {
+    if(!state.current[w.id]) state.current[w.id] = emptyEntry(w.rate);
+    const e = state.current[w.id];
+    if(!e.works) e.works = [];
+    if(e.note === undefined) e.note = '';
+  });
+}
+async function saveState(){ await storageSet(STORAGE_KEY, state); }
+
+function fmt(n){ return (Math.round((n||0)*100)/100).toLocaleString('en-IN'); }
+function weekLabel(){
+  const start = fromLocalISO(state.weekStart);
+  const end = new Date(start); end.setDate(end.getDate()+6);
+  const opts = {day:'2-digit', month:'short'};
+  return `${start.toLocaleDateString('en-IN',opts)} – ${end.toLocaleDateString('en-IN',opts)}`;
+}
+
+function computeRow(w){
+  const e = state.current[w.id] || emptyEntry(w.rate);
+  const days = DAY_KEYS.reduce((s,d)=> s + (parseFloat(e[d])||0), 0);
+  const rate = (e.rate === undefined || e.rate === '') ? w.rate : (parseFloat(e.rate)||0);
+  const wage = days * rate;
+  const interest = w.opening * state.interestRate;
+  const paid = parseFloat(e.paid)||0;
+  const extra = parseFloat(e.extra)||0;
+  const closingNoInterest = w.opening - paid + extra;
+  const closingWithInterest = closingNoInterest + interest;
+  return {days, rate, wage, interest, paid, extra, closingNoInterest, closingWithInterest};
+}
+
+function renderWeekBadge(){
+  document.getElementById('weekBadge').textContent = 'Week of ' + weekLabel();
+}
+
+function renderWeekHeader(){
+  const dates = weekDates(state.weekStart);
+  const cells = [`<th class="left">Worker</th>`]
+    .concat(DAY_LABELS.map((lbl,i)=>`<th><span class="day-name">${lbl}</span><span class="day-date">${dayDateLabel(dates[i])}</span></th>`))
+    .concat([`<th>Days</th>`,`<th>Rate/Day</th>`,`<th>Wage</th>`,
+             `<th class="left work-col">Work Done</th>`,`<th class="spacer-col"></th>`,
+             `<th>Opening</th>`,`<th>Interest</th>`,`<th>Paid</th>`,`<th>Extra</th>`,
+             `<th>Closing<br>(No Interest)</th>`,`<th>Closing<br>(With Interest)</th>`]);
+  document.getElementById('weekHeadRow').innerHTML = cells.join('');
+}
+
+function renderWeekTable(){
+  renderWeekHeader();
+  const body = document.getElementById('weekBody');
+  body.innerHTML = '';
+  let totalWage=0, totalOpen=0, totalInt=0, totalPaid=0, totalExtra=0, totalCloseNo=0, totalCloseWith=0;
+  let dupIssue = false;
+
+  state.workers.forEach(w=>{
+    const e = state.current[w.id];
+    const r = computeRow(w);
+    if(r.paid>0 && r.extra>0) dupIssue = true;
+    totalWage+=r.wage; totalOpen+=w.opening; totalInt+=r.interest;
+    totalPaid+=r.paid; totalExtra+=r.extra; totalCloseNo+=r.closingNoInterest; totalCloseWith+=r.closingWithInterest;
+
+    const tr = document.createElement('tr');
+    if(r.closingNoInterest < 0) tr.classList.add('neg');
+    const works = e.works || [];
+    const panelItems = state.workTypes.map(t=>`
+      <div class="work-panel-item">
+        <span class="work-name" data-select-work="${w.id}|${t}">${t}</span>
+        <button class="wp-icon" data-edit-type="${t}" title="Rename">✎</button>
+        <button class="wp-icon wp-trash" data-delete-type="${t}" title="Remove">🗑</button>
+      </div>`).join('');
+    tr.innerHTML = `
+      <td class="name">${w.name} <button class="wp-icon" data-send-worker="${w.id}" title="Send this worker's summary">📤</button> <button class="wp-icon wp-trash" data-remove-worker="${w.id}" title="Remove worker">🗑</button></td>
+      ${DAY_KEYS.map(d=>`<td><input class="cell day" type="number" min="0" step="0.5" data-w="${w.id}" data-day="${d}" value="${e[d]||''}"></td>`).join('')}
+      <td class="readonly">${fmt(r.days)}</td>
+      <td><input class="cell money" type="number" min="0" data-w="${w.id}" data-field="rate" value="${e.rate!==undefined && e.rate!=='' ? e.rate : w.rate}" title="Editable for this week only"></td>
+      <td class="readonly">₹${fmt(r.wage)}</td>
+      <td class="work-col">
+        <div class="chips chips-inline" id="chips-${w.id}">
+          ${works.map(t=>`<span class="chip">${t}<button data-remove-work="${w.id}|${t}">×</button></span>`).join('')}
+        </div>
+        <button class="btn btn-ghost wp-toggle" data-toggle-panel="${w.id}" type="button">+ Add work…</button>
+        <div class="work-panel" id="panel-${w.id}" style="display:none;">
+          <div class="work-panel-list">${panelItems}</div>
+          <div class="work-panel-add">
+            <input type="text" class="wp-add-input" id="wpAddInput-${w.id}" placeholder="New work type…">
+            <button class="btn btn-gold" data-panel-add="${w.id}" type="button">Add</button>
+          </div>
+        </div>
+        <input class="note-input" type="text" placeholder="Note (optional)" data-note="${w.id}" value="${e.note||''}" style="width:100%;margin-top:5px;padding:5px 6px;border:1px solid var(--line);border-radius:4px;font-size:11.5px;font-family:'Inter',sans-serif;">
+      </td>
+      <td class="spacer-col"></td>
+      <td><input class="cell money" type="number" min="0" data-w="${w.id}" data-field="opening" value="${w.opening}"></td>
+      <td class="readonly">₹${fmt(r.interest)}</td>
+      <td><input class="cell money" type="number" min="0" data-w="${w.id}" data-field="paid" value="${e.paid||''}"></td>
+      <td><input class="cell money" type="number" min="0" data-w="${w.id}" data-field="extra" value="${e.extra||''}"></td>
+      <td class="closing">₹${fmt(r.closingNoInterest)}</td>
+      <td class="closing" style="background:#F1E7D3;color:var(--ink-soft);">₹${fmt(r.closingWithInterest)}</td>
+    `;
+    body.appendChild(tr);
+  });
+
+  document.getElementById('dupFlag').style.display = dupIssue ? 'block' : 'none';
+
+  const foot = document.getElementById('weekFoot');
+  foot.innerHTML = `<tr>
+    <td class="name">TOTAL</td>
+    <td colspan="7"></td>
+    <td></td>
+    <td></td>
+    <td>₹${fmt(totalWage)}</td>
+    <td></td>
+    <td class="spacer-col"></td>
+    <td>₹${fmt(totalOpen)}</td>
+    <td>₹${fmt(totalInt)}</td>
+    <td>₹${fmt(totalPaid)}</td>
+    <td>₹${fmt(totalExtra)}</td>
+    <td>₹${fmt(totalCloseNo)}</td>
+    <td>₹${fmt(totalCloseWith)}</td>
+  </tr>`;
+
+  body.querySelectorAll('input.cell').forEach(inp=>{
+    inp.addEventListener('input', onCellEdit);
+  });
+  body.querySelectorAll('[data-note]').forEach(inp=>{
+    inp.addEventListener('change', ev=>{
+      state.current[ev.target.dataset.note].note = ev.target.value;
+      saveState();
+    });
+  });
+  body.querySelectorAll('[data-toggle-panel]').forEach(btn=>{
+    btn.addEventListener('click', ev=>{
+      ev.stopPropagation();
+      const id = btn.dataset.togglePanel;
+      const panel = document.getElementById('panel-'+id);
+      const isOpen = panel.style.display !== 'none';
+      document.querySelectorAll('.work-panel').forEach(p=>p.style.display='none');
+      panel.style.display = isOpen ? 'none' : 'block';
+    });
+  });
+  body.querySelectorAll('[data-select-work]').forEach(span=>{
+    span.addEventListener('click', ()=>{
+      const [wid, t] = span.dataset.selectWork.split('|');
+      if(!state.current[wid].works.includes(t)) state.current[wid].works.push(t);
+      saveState(); renderWeekTable();
+    });
+  });
+  body.querySelectorAll('[data-panel-add]').forEach(btn=>{
+    const wid = btn.dataset.panelAdd;
+    const doAdd = ()=>{
+      const input = document.getElementById('wpAddInput-'+wid);
+      const val = input.value.trim();
+      if(!val) return;
+      if(!state.workTypes.includes(val)) state.workTypes.push(val);
+      if(!state.current[wid].works.includes(val)) state.current[wid].works.push(val);
+      saveState(); renderWeekTable();
+      showToast(`"${val}" added.`);
+    };
+    btn.addEventListener('click', doAdd);
+    const input = document.getElementById('wpAddInput-'+wid);
+    if(input) input.addEventListener('keydown', ev=>{ if(ev.key==='Enter') doAdd(); });
+  });
+  body.querySelectorAll('[data-edit-type]').forEach(btn=>{
+    btn.addEventListener('click', ev=>{
+      ev.stopPropagation();
+      openRenameModal(btn.dataset.editType);
+    });
+  });
+  body.querySelectorAll('[data-delete-type]').forEach(btn=>{
+    btn.addEventListener('click', ev=>{
+      ev.stopPropagation();
+      const t = btn.dataset.deleteType;
+      showConfirm('Remove Work Type', `Remove "${t}" from the list? Past records that used it are kept as-is.`, ()=>{
+        state.workTypes = state.workTypes.filter(x=>x!==t);
+        saveState(); renderWeekTable();
+        showToast(`"${t}" removed from work type list.`);
+      });
+    });
+  });
+  body.querySelectorAll('[data-remove-work]').forEach(btn=>{
+    btn.addEventListener('click', ev=>{
+      const [wid, work] = ev.target.dataset.removeWork.split('|');
+      state.current[wid].works = state.current[wid].works.filter(t=>t!==work);
+      saveState(); renderWeekTable();
+    });
+  });
+  body.querySelectorAll('[data-send-worker]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const wid = btn.dataset.sendWorker;
+      const w = state.workers.find(x=>x.id===wid);
+      showSummaryModal(`${w.name}'s Summary`, buildWorkerSummaryText(w));
+    });
+  });
+  body.querySelectorAll('[data-remove-worker]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.removeWorker;
+      const w = state.workers.find(x=>x.id===id);
+      showConfirm('Remove Worker', `Remove ${w.name} from the roster? Their past history stays saved in History.`, ()=>{
+        state.workers = state.workers.filter(x=>x.id!==id);
+        delete state.current[id];
+        saveState(); renderAll();
+        showToast(`${w.name} removed.`);
+      });
+    });
+  });
+}
+
+function onCellEdit(ev){
+  const wid = ev.target.dataset.w;
+  const day = ev.target.dataset.day;
+  const field = ev.target.dataset.field;
+  const val = ev.target.value === '' ? 0 : parseFloat(ev.target.value);
+  if(day) state.current[wid][day] = val;
+  if(field === 'opening'){
+    const w = state.workers.find(x=>x.id===wid);
+    if(w) w.opening = val;
+  } else if(field){
+    state.current[wid][field] = val;
+  }
+  saveState();
+  renderWeekTable(); // refresh computed columns + totals
+  // restore focus
+  const sel = day ? `[data-w="${wid}"][data-day="${day}"]` : `[data-w="${wid}"][data-field="${field}"]`;
+  const el = document.querySelector(sel);
+  if(el){ el.focus(); const v=el.value; el.value=''; el.value=v; }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function buildSummaryText(){
+  let lines = [`*Estate Labour Summary — ${weekLabel()}*`, ''];
+  state.workers.forEach(w=>{
+    const r = computeRow(w);
+    const e = state.current[w.id];
+    if(r.days===0 && w.opening===0 && r.closingNoInterest===0) return;
+    let line = `${w.name}: ${fmt(r.days)} days, wage ₹${fmt(r.wage)}`;
+    if(r.paid>0) line += `, paid back ₹${fmt(r.paid)}`;
+    if(r.extra>0) line += `, extra advance ₹${fmt(r.extra)}`;
+    line += `, balance ₹${fmt(r.closingNoInterest)} (₹${fmt(r.closingWithInterest)} incl. interest)`;
+    if(e.works && e.works.length) line += `\n   Work: ${e.works.join(', ')}`;
+    if(e.note) line += `\n   Note: ${e.note}`;
+    lines.push(line);
+  });
+  return lines.join('\n');
+}
+
+function buildWorkerSummaryText(w){
+  const r = computeRow(w);
+  const e = state.current[w.id];
+  let lines = [`*${w.name} — ${weekLabel()}*`, ''];
+  let line = `${fmt(r.days)} days, wage ₹${fmt(r.wage)}`;
+  if(r.paid>0) line += `, paid back ₹${fmt(r.paid)}`;
+  if(r.extra>0) line += `, extra advance ₹${fmt(r.extra)}`;
+  line += `, balance ₹${fmt(r.closingNoInterest)} (₹${fmt(r.closingWithInterest)} incl. interest)`;
+  lines.push(line);
+  if(e.works && e.works.length) lines.push(`Work: ${e.works.join(', ')}`);
+  if(e.note) lines.push(`Note: ${e.note}`);
+  return lines.join('\n');
+}
+
+function showSummaryModal(title, text){
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalText').textContent = text;
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function performSaveAndRoll(){
+  const rows = state.workers.map(w=>{
+    const r = computeRow(w);
+    const e = state.current[w.id];
+    return {id:w.id, name:w.name, rate:r.rate, days:r.days, wage:r.wage,
+             opening:w.opening, interest:r.interest, paid:r.paid, extra:r.extra,
+             closingNoInterest:r.closingNoInterest, closingWithInterest:r.closingWithInterest,
+             attendance: DAY_KEYS.map(d=>e[d]||0),
+             works: (e.works||[]).slice(), note: e.note||''};
+  });
+  const start = fromLocalISO(state.weekStart);
+  const end = new Date(start); end.setDate(end.getDate()+6);
+  state.history.unshift({weekStart: state.weekStart, weekEnd: toLocalISO(end), rows});
+
+  // roll forward: NO-INTEREST closing balance becomes next week's opening balance
+  state.workers.forEach(w=>{
+    const r = computeRow(w);
+    w.opening = r.closingNoInterest;
+    state.current[w.id] = emptyEntry(w.rate); // fresh week starts at each worker's current base rate
+  });
+  const next = new Date(end); next.setDate(next.getDate()+1);
+  state.weekStart = toLocalISO(next);
+}
+
+async function saveWeekAndRoll(){
+  performSaveAndRoll();
+  await saveState();
+  renderAll();
+  showToast('Week saved. Opening balance carried forward WITHOUT interest.');
+}
+
+async function autoRollToCurrentWeek(){
+  let rolled = 0;
+  while(true){
+    const start = fromLocalISO(state.weekStart);
+    const end = new Date(start); end.setDate(end.getDate()+6);
+    if(todayISO() > toLocalISO(end)){
+      performSaveAndRoll();
+      rolled++;
+      if(rolled > 104) break; // safety cap (~2 years), avoid any runaway loop
+    } else break;
+  }
+  if(rolled > 0){
+    await saveState();
+    showToast(`${rolled} past week${rolled>1?'s':''} auto-saved to History. Showing this week now.`);
+  }
+  return rolled;
+}
+
+function renderHistory(){
+  const list = document.getElementById('historyList');
+  document.getElementById('historyCount').textContent = state.history.length
+    ? `${state.history.length} week${state.history.length===1?'':'s'} saved`
+    : '';
+  if(state.history.length===0){
+    list.innerHTML = '<div class="empty">No weeks saved yet. Use "Save Week &amp; Start Next Week" once you\'re done entering this week.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  state.history.forEach((wk, idx)=>{
+    const totalWage = wk.rows.reduce((s,r)=>s+r.wage,0);
+    const totalCloseNo = wk.rows.reduce((s,r)=>s+r.closingNoInterest,0);
+    const dates = weekDates(wk.weekStart);
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    const opts = {day:'2-digit', month:'short', year:'2-digit'};
+    const label = `${fromLocalISO(wk.weekStart).toLocaleDateString('en-IN',opts)} – ${fromLocalISO(wk.weekEnd).toLocaleDateString('en-IN',opts)}`;
+    div.innerHTML = `
+      <div class="history-head" data-idx="${idx}">
+        <span>${label}</span>
+        <span class="stats">Wages ₹${fmt(totalWage)} · Total balances ₹${fmt(totalCloseNo)}</span>
+      </div>
+      <div class="history-body" id="hbody-${idx}">
+        <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th class="left">Worker</th>
+            ${DAY_LABELS.map((lbl,i)=>`<th><span class="day-name">${lbl}</span><span class="day-date">${dayDateLabel(dates[i])}</span></th>`).join('')}
+            <th>Days</th><th>Rate</th><th>Wage</th><th>Opening</th><th>Interest</th><th>Paid</th><th>Extra</th>
+            <th>Closing<br>(No Interest)</th><th>Closing<br>(With Interest)</th><th class="left">Work Done</th>
+          </tr></thead>
+          <tbody>
+            ${wk.rows.map(r=>`<tr>
+              <td class="name">${r.name}</td>
+              ${(r.attendance||DAY_KEYS.map(()=>0)).map(v=>`<td class="readonly">${v||''}</td>`).join('')}
+              <td class="readonly">${fmt(r.days)}</td>
+              <td class="readonly">₹${fmt(r.rate)}</td>
+              <td class="readonly">₹${fmt(r.wage)}</td>
+              <td class="readonly">₹${fmt(r.opening)}</td>
+              <td class="readonly">₹${fmt(r.interest)}</td>
+              <td class="readonly">₹${fmt(r.paid)}</td>
+              <td class="readonly">₹${fmt(r.extra)}</td>
+              <td class="closing">₹${fmt(r.closingNoInterest)}</td>
+              <td class="closing" style="background:#F1E7D3;color:var(--ink-soft);">₹${fmt(r.closingWithInterest)}</td>
+              <td style="text-align:left;font-size:11.5px;">${(r.works&&r.works.length)?r.works.join(', '):'—'}${r.note?`<br><em style="color:var(--ink-soft);">${r.note}</em>`:''}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  list.querySelectorAll('.history-head').forEach(h=>{
+    h.addEventListener('click', ()=>{
+      document.getElementById('hbody-'+h.dataset.idx).classList.toggle('open');
+    });
+  });
+}
+
+function renameWorkType(oldName, newName){
+  const idx = state.workTypes.indexOf(oldName);
+  if(idx > -1) state.workTypes[idx] = newName;
+  if(!state.workTypes.includes(newName)) state.workTypes.push(newName);
+  // merge duplicates if renaming onto an existing type
+  state.workTypes = [...new Set(state.workTypes)];
+
+  Object.values(state.current).forEach(e=>{
+    if(e.works && e.works.includes(oldName)){
+      e.works = [...new Set(e.works.map(x => x===oldName ? newName : x))];
+    }
+  });
+  state.history.forEach(wk=>{
+    wk.rows.forEach(r=>{
+      if(r.works && r.works.includes(oldName)){
+        r.works = [...new Set(r.works.map(x => x===oldName ? newName : x))];
+      }
+    });
+  });
+
+  saveState(); renderWeekTable();
+  showToast(`Renamed "${oldName}" to "${newName}" everywhere.`);
+}
+
+function renderWeekInfoBar(){
+  const start = fromLocalISO(state.weekStart);
+  const wk = isoWeekNumber(start);
+  const sysToday = todayISO();
+  let note = '';
+  if(sysToday < state.weekStart || sysToday > toLocalISO(new Date(start.getFullYear(),start.getMonth(),start.getDate()+6))){
+    note = ` <span style="color:var(--rust);">(current week doesn't include today — ${dayDateLabel(fromLocalISO(sysToday))})</span>`;
+  }
+  document.getElementById('weekInfoBar').innerHTML = `<b>Week ${wk.week} of ${wk.year}</b> &nbsp;·&nbsp; ${weekLabel()}${note}`;
+}
+
+function renderAll(){
+  renderWeekBadge();
+  renderWeekInfoBar();
+  renderWeekTable();
+  renderHistory();
+  document.getElementById('rateInput').value = (state.interestRate*100);
+}
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('rateInput').addEventListener('change', ev=>{
+  state.interestRate = (parseFloat(ev.target.value)||0)/100;
+  saveState(); renderWeekTable();
+});
+
+function addWorker(nameEl, rateEl, openingEl){
+  const name = document.getElementById(nameEl).value.trim();
+  if(!name) return;
+  const rate = parseFloat(document.getElementById(rateEl).value)||0;
+  const opening = parseFloat(document.getElementById(openingEl).value)||0;
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g,'-') + '-' + Date.now();
+  state.workers.push({id, name, rate, opening});
+  state.current[id] = emptyEntry(rate);
+  document.getElementById(nameEl).value='';
+  document.getElementById(rateEl).value='';
+  document.getElementById(openingEl).value='';
+  saveState(); renderAll();
+  showToast(`${name} added.`);
+}
+
+document.getElementById('btnQuickAdd').addEventListener('click', ()=>{
+  addWorker('quickName','quickRate','quickOpening');
+});
+
+document.getElementById('btnSaveWeek').addEventListener('click', saveWeekAndRoll);
+
+document.getElementById('btnSummary').addEventListener('click', ()=>{
+  showSummaryModal('Weekly Summary', buildSummaryText());
+});
+document.getElementById('btnCloseModal').addEventListener('click', ()=>{
+  document.getElementById('modalBg').classList.remove('show');
+});
+function showConfirm(title, message, onYes){
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').textContent = message;
+  confirmCallback = onYes;
+  document.getElementById('confirmModalBg').classList.add('show');
+}
+document.getElementById('btnConfirmYes').addEventListener('click', ()=>{
+  document.getElementById('confirmModalBg').classList.remove('show');
+  const cb = confirmCallback; confirmCallback = null;
+  if(cb) cb();
+});
+document.getElementById('btnConfirmNo').addEventListener('click', ()=>{
+  document.getElementById('confirmModalBg').classList.remove('show');
+  confirmCallback = null;
+});
+
+function openRenameModal(oldName){
+  renameOldName = oldName;
+  document.getElementById('renameModalInput').value = oldName;
+  document.getElementById('renameModalBg').classList.add('show');
+  document.getElementById('renameModalInput').focus();
+}
+function confirmRename(){
+  const newName = document.getElementById('renameModalInput').value.trim();
+  document.getElementById('renameModalBg').classList.remove('show');
+  if(!newName || !renameOldName || newName === renameOldName){ renameOldName = null; return; }
+  renameWorkType(renameOldName, newName);
+  renameOldName = null;
+}
+document.getElementById('btnConfirmRename').addEventListener('click', confirmRename);
+document.getElementById('renameModalInput').addEventListener('keydown', ev=>{
+  if(ev.key === 'Enter') confirmRename();
+});
+document.getElementById('btnCancelRename').addEventListener('click', ()=>{
+  document.getElementById('renameModalBg').classList.remove('show');
+  renameOldName = null;
+});
+
+// close any open work-type panel when clicking outside it
+document.addEventListener('click', ev=>{
+  document.querySelectorAll('.work-panel').forEach(p=>{
+    if(p.style.display !== 'none'){
+      const cell = p.closest('td.work-col');
+      if(cell && !cell.contains(ev.target)) p.style.display = 'none';
+    }
+  });
+});
+
+document.getElementById('btnCopy').addEventListener('click', ()=>{
+  const txt = document.getElementById('modalText').textContent;
+  navigator.clipboard.writeText(txt).then(()=>showToast('Summary copied to clipboard'));
+});
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `estate-ledger-backup-${todayISO()}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Backup downloaded — save this file to Google Drive.');
+});
+
+document.getElementById('importFile').addEventListener('change', (ev)=>{
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const parsed = JSON.parse(e.target.result);
+      if(!parsed.workers || !parsed.current){ throw new Error('not a valid backup file'); }
+      showConfirm('Restore Backup', 'This will replace all current data in the app. Continue?', async ()=>{
+        state = parsed;
+        if(!state.workTypes) state.workTypes = DEFAULT_WORK_TYPES.slice();
+        await saveState();
+        renderAll();
+        showToast('Backup restored successfully.');
+      });
+    }catch(err){
+      showToast('Could not read this file as a valid backup.');
+    }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+(async function init(){
+  await loadState();
+  await autoRollToCurrentWeek();
+  renderAll();
+})();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(e=>console.warn('SW registration failed', e));
+  });
+}
+</script>
+</body>
+</html>
