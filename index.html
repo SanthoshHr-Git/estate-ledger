@@ -98,6 +98,16 @@
   tbody td.closing{font-weight:700;color:var(--green);background:#E6EEE1;font-family:'JetBrains Mono',monospace;}
   tbody tr.neg td.closing{background:var(--rust-bg);color:var(--rust);}
 
+  /* Frozen worker-name column so it stays visible while scrolling right */
+  thead th:first-child, tbody td.name, tfoot td.name{
+    position:sticky; left:0; z-index:3;
+    box-shadow:2px 0 4px rgba(0,0,0,.08);
+  }
+  thead th:first-child{ z-index:4; background:var(--green); }
+  tbody td.name{ background:var(--white); }
+  tbody tr:nth-child(even) td.name{ background:var(--paper); }
+  tfoot td.name{ background:var(--paper-dark); z-index:4; }
+
   input.cell{
     width:64px;padding:5px 4px;border:1px solid var(--line);border-radius:3px;
     text-align:center;font-size:12.5px;font-family:'JetBrains Mono',monospace;
@@ -109,6 +119,7 @@
 
   tfoot td{font-weight:700;padding:9px 6px;border-top:2px solid var(--green);background:var(--paper-dark);font-family:'JetBrains Mono',monospace;font-size:12.5px;text-align:center;}
   tfoot td.name{text-align:left;font-family:'Fraunces',serif;font-size:13px;}
+
 
   .btn{
     font-family:'Inter',sans-serif;font-weight:600;font-size:13px;cursor:pointer;
