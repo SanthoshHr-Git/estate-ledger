@@ -38,12 +38,17 @@
   .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 60px;}
 
   .rotate-banner{
-    display:none;align-items:center;gap:10px;
+    display:none;align-items:center;justify-content:space-between;gap:10px;
     background:var(--gold);color:var(--white);font-weight:600;font-size:13px;
-    padding:10px 16px;border-radius:0;
+    padding:10px 16px;border-radius:0;flex-wrap:wrap;
   }
+  .rotate-banner .msg{display:flex;align-items:center;gap:10px;}
   .rotate-banner .icon{font-size:18px;animation:rotateHint 1.6s ease-in-out infinite;}
   @keyframes rotateHint{ 0%,100%{transform:rotate(0deg);} 50%{transform:rotate(90deg);} }
+  .rotate-btn{
+    background:var(--green);color:var(--white);border:none;border-radius:5px;
+    padding:8px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;
+  }
   @media (max-width: 760px) and (orientation: portrait){
     .rotate-banner{ display:flex; }
   }
@@ -239,7 +244,10 @@
 </style>
 </head>
 <body>
-<div class="rotate-banner"><span class="icon">↻</span> Turn your phone sideways (landscape) for a much easier view to enter data</div>
+<div class="rotate-banner">
+  <span class="msg"><span class="icon">↻</span> Turn your phone sideways for a much easier view</span>
+  <button class="rotate-btn" id="btnForceLandscape" type="button">⤢ Lock Landscape</button>
+</div>
 <div class="wrap">
 
   <header class="top">
@@ -1098,14 +1106,24 @@ if('serviceWorker' in navigator){
   });
 }
 
-// When launched as an installed app (home-screen icon), try to lock to landscape.
-// Browsers only allow this in standalone/fullscreen mode, not in a normal browser tab.
-(function tryLockLandscape(){
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  if(isStandalone && screen.orientation && screen.orientation.lock){
-    screen.orientation.lock('landscape').catch(()=>{ /* device/browser doesn't support locking; rotate banner covers this */ });
+// Rotation lock MUST be triggered by a direct tap — browsers silently block it
+// when called automatically on page load, which is why the earlier auto-attempt didn't work.
+document.getElementById('btnForceLandscape').addEventListener('click', async ()=>{
+  try{
+    if(document.documentElement.requestFullscreen){
+      await document.documentElement.requestFullscreen();
+    }
+    if(screen.orientation && screen.orientation.lock){
+      await screen.orientation.lock('landscape');
+      showToast('Locked to landscape. Tap the ↻ button again or press back to undo.');
+    } else {
+      showToast('Your browser doesn\'t support forced rotation — please rotate your phone manually.');
+    }
+  }catch(e){
+    console.warn('Orientation lock failed', e);
+    showToast('Could not force landscape on this device — please rotate your phone manually.');
   }
-})();
+});
 </script>
 </body>
 </html>
