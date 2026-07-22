@@ -53,6 +53,25 @@
     .rotate-banner{ display:flex; }
   }
 
+  /* rainfall */
+  .rain-chart{display:flex;align-items:flex-end;gap:18px;height:180px;padding:10px 6px 0;overflow-x:auto;}
+  .rain-bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:64px;height:100%;}
+  .rain-bar{
+    width:44px;border-radius:5px 5px 2px 2px;
+    background:linear-gradient(180deg, var(--gold-light), var(--gold));
+    transition:height .3s ease; cursor:pointer;
+  }
+  .rain-bar.active{background:linear-gradient(180deg, #A9C9AA, var(--green));}
+  .rain-bar-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px;}
+  .rain-bar-label{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:8px;}
+  .year-pill{
+    padding:6px 14px;border-radius:14px;font-size:12.5px;font-weight:600;cursor:pointer;
+    border:1px solid var(--line);background:var(--white);color:var(--ink-soft);
+  }
+  .year-pill.active{background:var(--green);color:var(--white);border-color:var(--green);}
+  .month-bar-track{background:var(--paper);border-radius:3px;height:8px;width:100%;overflow:hidden;margin-top:3px;}
+  .month-bar-fill{background:var(--gold);height:100%;border-radius:3px;}
+
   /* header */
   header.top{
     display:flex;justify-content:space-between;align-items:flex-end;
@@ -267,6 +286,7 @@
   <div class="tabs">
     <div class="tab active" data-tab="week">This Week</div>
     <div class="tab" data-tab="history">History</div>
+    <div class="tab" data-tab="rainfall">Rainfall</div>
   </div>
   <div id="weekInfoBar" class="week-info-bar"></div>
 
@@ -327,6 +347,46 @@
           Restore from Backup
           <input type="file" id="importFile" accept=".json" style="display:none;">
         </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- RAINFALL -->
+  <div class="panel" id="panel-rainfall">
+    <div class="card">
+      <div class="card-head">
+        <h2>Rainfall by Year</h2>
+        <span style="font-size:11.5px;color:var(--ink-soft);" id="rainYearTotalNote"></span>
+      </div>
+      <div id="rainYearChart"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Add a Reading</h2>
+      </div>
+      <div class="add-worker">
+        <input type="date" id="rainDateInput">
+        <input type="number" id="rainInchesInput" placeholder="Rained (inches)" step="0.01" min="0">
+        <button class="btn btn-primary" id="btnAddRain">Add Reading</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Year Detail</h2>
+        <div id="rainYearTabs" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <div id="rainMonthlyTable"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>All Readings — <span id="rainSelectedYearLabel"></span></h2></div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th class="left">Date</th><th>Rained (inches)</th><th></th></tr></thead>
+          <tbody id="rainEntriesBody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -393,6 +453,9 @@ try{
 const DAY_KEYS = ['sun','mon','tue','wed','thu','fri','sat'];
 const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const STORAGE_KEY = 'estate-ledger-data';
+// Seeded from the user's 4-year Excel rainfall log (2023-2026), d=date i=inches
+const DEFAULT_RAINFALL = [{"d":"2023-04-05","i":1.35},{"d":"2023-04-28","i":0.65},{"d":"2023-04-30","i":0.2},{"d":"2023-05-09","i":0.55},{"d":"2023-05-10","i":0.39},{"d":"2023-05-12","i":0.49},{"d":"2023-05-23","i":1.2},{"d":"2023-05-31","i":0.26},{"d":"2023-06-12","i":0.45},{"d":"2023-06-20","i":0.6},{"d":"2023-06-21","i":0.6},{"d":"2023-06-22","i":0.42},{"d":"2023-06-28","i":0.5},{"d":"2023-07-03","i":0.75},{"d":"2023-07-05","i":0.75},{"d":"2023-07-07","i":1.4},{"d":"2023-07-08","i":0.5},{"d":"2023-07-09","i":0.18},{"d":"2023-07-10","i":0.15},{"d":"2023-07-13","i":0.4},{"d":"2023-07-15","i":1.0},{"d":"2023-07-16","i":0.25},{"d":"2023-07-17","i":0.15},{"d":"2023-07-18","i":0.8},{"d":"2023-07-19","i":0.75},{"d":"2023-07-20","i":0.3},{"d":"2023-07-21","i":0.55},{"d":"2023-07-22","i":1.35},{"d":"2023-07-23","i":1.65},{"d":"2023-07-24","i":1.0},{"d":"2023-07-25","i":1.5},{"d":"2023-07-26","i":0.65},{"d":"2023-08-05","i":0.7},{"d":"2023-08-19","i":0.3},{"d":"2023-08-31","i":0.24},{"d":"2023-09-01","i":2.1},{"d":"2023-09-06","i":0.5},{"d":"2023-09-10","i":0.23},{"d":"2023-09-15","i":0.48},{"d":"2023-09-25","i":0.2},{"d":"2023-09-27","i":0.2},{"d":"2023-09-28","i":0.2},{"d":"2023-09-30","i":0.3},{"d":"2023-10-01","i":1.2},{"d":"2023-10-05","i":0.5},{"d":"2023-10-08","i":1.9},{"d":"2023-10-12","i":0.38},{"d":"2024-03-23","i":0.2},{"d":"2024-04-18","i":0.7},{"d":"2024-04-19","i":1.2},{"d":"2024-04-19","i":2.0},{"d":"2024-04-21","i":0.3},{"d":"2024-04-22","i":0.15},{"d":"2024-05-09","i":0.26},{"d":"2024-05-13","i":1.25},{"d":"2024-05-15","i":0.9},{"d":"2024-05-16","i":0.4},{"d":"2024-05-17","i":1.0},{"d":"2024-05-18","i":0.4},{"d":"2024-05-19","i":0.9},{"d":"2024-05-20","i":1.4},{"d":"2024-05-21","i":0.3},{"d":"2024-05-25","i":0.8},{"d":"2024-06-06","i":0.5},{"d":"2024-06-08","i":0.4},{"d":"2024-06-09","i":0.75},{"d":"2024-06-10","i":0.1},{"d":"2024-06-17","i":0.6},{"d":"2024-06-20","i":0.2},{"d":"2024-06-23","i":0.6},{"d":"2024-06-24","i":0.5},{"d":"2024-06-25","i":0.5},{"d":"2024-06-26","i":0.92},{"d":"2024-06-28","i":0.7},{"d":"2024-06-30","i":0.7},{"d":"2024-07-01","i":0.85},{"d":"2024-07-02","i":0.75},{"d":"2024-07-03","i":0.85},{"d":"2024-07-06","i":1.35},{"d":"2024-07-07","i":1.45},{"d":"2024-07-08","i":0.45},{"d":"2024-07-10","i":0.35},{"d":"2024-07-12","i":0.7},{"d":"2024-07-13","i":0.25},{"d":"2024-07-14","i":1.85},{"d":"2024-07-15","i":2.8},{"d":"2024-07-16","i":2.2},{"d":"2024-07-17","i":1.6},{"d":"2024-07-18","i":2.2},{"d":"2024-07-19","i":0.9},{"d":"2024-07-20","i":1.2},{"d":"2024-07-21","i":1.0},{"d":"2024-07-23","i":0.5},{"d":"2024-07-24","i":1.75},{"d":"2024-07-25","i":1.75},{"d":"2024-07-26","i":1.4},{"d":"2024-07-30","i":2.7},{"d":"2024-07-31","i":1.35},{"d":"2024-08-01","i":0.8},{"d":"2024-08-02","i":0.2},{"d":"2024-08-06","i":0.4},{"d":"2024-08-11","i":0.25},{"d":"2024-08-12","i":0.8},{"d":"2024-08-13","i":0.4},{"d":"2024-08-15","i":0.35},{"d":"2024-08-16","i":0.1},{"d":"2024-08-18","i":0.2},{"d":"2024-08-19","i":0.2},{"d":"2024-08-20","i":0.25},{"d":"2024-08-21","i":0.5},{"d":"2024-08-24","i":0.5},{"d":"2024-08-25","i":0.5},{"d":"2024-08-26","i":0.9},{"d":"2024-08-27","i":0.5},{"d":"2024-08-29","i":0.1},{"d":"2024-09-02","i":0.2},{"d":"2024-09-03","i":0.2},{"d":"2024-09-09","i":0.75},{"d":"2024-09-10","i":0.35},{"d":"2024-09-11","i":0.2},{"d":"2024-09-12","i":0.1},{"d":"2024-09-23","i":0.75},{"d":"2024-09-24","i":1.1},{"d":"2024-09-25","i":0.1},{"d":"2024-09-28","i":0.5},{"d":"2024-09-29","i":0.35},{"d":"2024-10-04","i":0.3},{"d":"2024-10-05","i":0.2},{"d":"2024-10-06","i":0.9},{"d":"2024-10-08","i":0.35},{"d":"2024-10-11","i":0.33},{"d":"2024-10-13","i":0.45},{"d":"2024-10-15","i":0.75},{"d":"2024-10-17","i":0.35},{"d":"2024-10-19","i":0.5},{"d":"2024-10-20","i":0.2},{"d":"2024-10-21","i":0.2},{"d":"2024-10-23","i":0.2},{"d":"2024-10-30","i":0.2},{"d":"2024-10-31","i":0.25},{"d":"2024-11-03","i":0.5},{"d":"2024-11-14","i":0.7},{"d":"2024-11-16","i":0.45},{"d":"2024-12-02","i":1.0},{"d":"2025-03-15","i":0.05},{"d":"2025-03-20","i":0.1},{"d":"2025-03-22","i":0.1},{"d":"2025-03-24","i":0.35},{"d":"2025-04-03","i":0.2},{"d":"2025-04-05","i":0.29},{"d":"2025-04-13","i":0.5},{"d":"2025-04-15","i":0.75},{"d":"2025-04-18","i":0.45},{"d":"2025-04-19","i":0.4},{"d":"2025-04-20","i":0.95},{"d":"2025-04-21","i":0.7},{"d":"2025-04-30","i":0.36},{"d":"2025-05-01","i":0.55},{"d":"2025-05-05","i":1.8},{"d":"2025-05-13","i":0.15},{"d":"2025-05-14","i":0.72},{"d":"2025-05-16","i":1.0},{"d":"2025-05-19","i":1.0},{"d":"2025-05-22","i":1.0},{"d":"2025-05-23","i":1.4},{"d":"2025-05-24","i":3.5},{"d":"2025-05-25","i":1.25},{"d":"2025-05-26","i":1.05},{"d":"2025-05-27","i":0.75},{"d":"2025-05-28","i":0.4},{"d":"2025-06-03","i":1.5},{"d":"2025-06-11","i":1.0},{"d":"2025-06-12","i":0.35},{"d":"2025-06-14","i":0.9},{"d":"2025-06-15","i":1.0},{"d":"2025-06-16","i":1.0},{"d":"2025-06-17","i":0.25},{"d":"2025-06-18","i":0.3},{"d":"2025-06-22","i":0.25},{"d":"2025-06-23","i":0.3},{"d":"2025-06-24","i":0.25},{"d":"2025-06-25","i":0.3},{"d":"2025-06-26","i":0.2},{"d":"2025-06-27","i":0.5},{"d":"2025-06-28","i":0.25},{"d":"2025-06-29","i":0.1},{"d":"2025-06-30","i":0.1},{"d":"2025-07-01","i":0.15},{"d":"2025-07-02","i":0.5},{"d":"2025-07-03","i":0.52},{"d":"2025-07-05","i":0.35},{"d":"2025-07-07","i":0.1},{"d":"2025-07-09","i":0.1},{"d":"2025-07-11","i":0.1},{"d":"2025-07-12","i":0.2},{"d":"2025-07-13","i":0.1},{"d":"2025-07-14","i":0.3},{"d":"2025-07-16","i":0.15},{"d":"2025-07-18","i":0.15},{"d":"2025-07-19","i":0.15},{"d":"2025-07-21","i":0.5},{"d":"2025-07-22","i":0.45},{"d":"2025-07-23","i":0.5},{"d":"2025-07-25","i":1.5},{"d":"2025-07-26","i":0.85},{"d":"2025-07-27","i":0.15},{"d":"2025-07-28","i":0.15},{"d":"2025-07-29","i":0.25},{"d":"2025-08-02","i":0.9},{"d":"2025-08-03","i":0.7},{"d":"2025-08-04","i":0.7},{"d":"2025-08-05","i":0.1},{"d":"2025-08-10","i":0.15},{"d":"2025-08-12","i":0.35},{"d":"2025-08-14","i":0.2},{"d":"2025-08-15","i":0.5},{"d":"2025-08-16","i":0.5},{"d":"2025-08-17","i":0.75},{"d":"2025-08-18","i":1.1},{"d":"2025-08-26","i":0.2},{"d":"2025-08-27","i":0.5},{"d":"2025-08-28","i":1.0},{"d":"2025-08-29","i":1.5},{"d":"2025-08-30","i":0.15},{"d":"2025-09-01","i":0.2},{"d":"2025-09-02","i":0.1},{"d":"2025-09-03","i":0.3},{"d":"2025-09-10","i":1.5},{"d":"2025-09-19","i":0.4},{"d":"2025-09-26","i":0.2},{"d":"2025-09-28","i":0.2},{"d":"2025-09-29","i":0.5},{"d":"2025-10-02","i":0.35},{"d":"2025-10-08","i":2.5},{"d":"2025-10-09","i":0.9},{"d":"2025-10-14","i":0.4},{"d":"2025-10-16","i":0.8},{"d":"2025-10-17","i":0.3},{"d":"2025-10-18","i":1.0},{"d":"2025-10-19","i":0.8},{"d":"2025-10-20","i":1.4},{"d":"2025-10-21","i":1.5},{"d":"2025-10-22","i":2.5},{"d":"2026-03-31","i":0.45},{"d":"2026-04-27","i":0.25},{"d":"2026-04-28","i":1.25},{"d":"2026-05-05","i":0.22},{"d":"2026-05-07","i":0.9},{"d":"2026-05-11","i":0.4},{"d":"2026-05-19","i":1.05},{"d":"2026-05-27","i":0.5},{"d":"2026-05-31","i":1.55},{"d":"2026-06-02","i":1.52},{"d":"2026-06-02","i":0.56},{"d":"2026-06-08","i":0.6},{"d":"2026-06-16","i":1.5},{"d":"2026-06-24","i":0.7},{"d":"2026-06-28","i":0.6},{"d":"2026-06-30","i":0.32},{"d":"2026-07-01","i":0.4},{"d":"2026-07-03","i":0.8},{"d":"2026-07-04","i":0.6},{"d":"2026-07-05","i":1.1},{"d":"2026-07-06","i":2.8},{"d":"2026-07-07","i":3.0},{"d":"2026-07-08","i":0.15},{"d":"2026-07-17","i":0.4},{"d":"2026-07-19","i":0.1},{"d":"2027-07-29","i":0.4}].map(e => ({date: e.d, inches: e.i}));
+
 const DEFAULT_WORK_TYPES = [
   'Coffee Picking','Coffee Spray','Pepper Spray','Coffee Planting','Halvana Planting',
   'Pepper Planting','Silver Planting','Areca Planting','Dul Agathe','Margasi',
@@ -428,7 +491,8 @@ function defaultState(){
     ],
     current: {}, // workerId -> {sun..sat, paid, extra, rate, works[], note}
     history: [],  // [{weekStart, weekEnd, rows:[{id,name,rate,days,wage,opening,interest,paid,extra,closing,works,note}]}]
-    workTypes: DEFAULT_WORK_TYPES.slice()
+    workTypes: DEFAULT_WORK_TYPES.slice(),
+    rainfall: DEFAULT_RAINFALL.map((e,i)=>({id:'rain-seed-'+i, date:e.date, inches:e.inches}))
   };
 }
 
@@ -545,6 +609,7 @@ async function loadState(){
   const saved = await storageGet(STORAGE_KEY);
   state = saved || defaultState();
   if(!state.workTypes) state.workTypes = DEFAULT_WORK_TYPES.slice();
+  if(!state.rainfall) state.rainfall = DEFAULT_RAINFALL.map((e,i)=>({id:'rain-seed-'+i, date:e.date, inches:e.inches}));
   state.workers.forEach(w => {
     if(!state.current[w.id]) state.current[w.id] = emptyEntry(w.rate);
     const e = state.current[w.id];
@@ -958,11 +1023,128 @@ function renderWeekInfoBar(){
   document.getElementById('weekInfoBar').innerHTML = `<b>Week ${wk.week} of ${wk.year}</b> &nbsp;·&nbsp; ${weekLabel()}${note}`;
 }
 
+let selectedRainYear = null;
+
+function rainYears(){
+  const years = new Set(state.rainfall.map(e => e.date.slice(0,4)));
+  return Array.from(years).sort();
+}
+function rainYearTotal(year){
+  return state.rainfall.filter(e=>e.date.slice(0,4)===year).reduce((s,e)=>s+(parseFloat(e.inches)||0), 0);
+}
+function rainMonthlyForYear(year){
+  const months = Array(12).fill(0);
+  state.rainfall.filter(e=>e.date.slice(0,4)===year).forEach(e=>{
+    const m = parseInt(e.date.slice(5,7),10)-1;
+    months[m] += parseFloat(e.inches)||0;
+  });
+  return months;
+}
+
+function renderRainYearChart(){
+  const years = rainYears();
+  const el = document.getElementById('rainYearChart');
+  if(years.length===0){ el.innerHTML = '<div class="empty">No rainfall readings yet — add your first one below.</div>'; return; }
+  const totals = years.map(y=>rainYearTotal(y));
+  const max = Math.max(...totals, 1);
+  el.innerHTML = `<div class="rain-chart">${years.map((y,i)=>{
+    const h = Math.max(6, Math.round((totals[i]/max)*150));
+    const active = y===selectedRainYear ? 'active' : '';
+    return `<div class="rain-bar-col">
+      <div class="rain-bar-val">${totals[i].toFixed(2)}"</div>
+      <div class="rain-bar ${active}" style="height:${h}px;" data-select-year="${y}"></div>
+      <div class="rain-bar-label">${y}</div>
+    </div>`;
+  }).join('')}</div>`;
+  el.querySelectorAll('[data-select-year]').forEach(bar=>{
+    bar.addEventListener('click', ()=>{ selectedRainYear = bar.dataset.selectYear; renderRainfall(); });
+  });
+  const note = document.getElementById('rainYearTotalNote');
+  if(selectedRainYear) note.textContent = `${selectedRainYear} total: ${rainYearTotal(selectedRainYear).toFixed(2)}"`;
+}
+
+function renderRainYearTabs(){
+  const years = rainYears();
+  const el = document.getElementById('rainYearTabs');
+  el.innerHTML = years.map(y=>`<div class="year-pill ${y===selectedRainYear?'active':''}" data-year-pill="${y}">${y}</div>`).join('');
+  el.querySelectorAll('[data-year-pill]').forEach(p=>{
+    p.addEventListener('click', ()=>{ selectedRainYear = p.dataset.yearPill; renderRainfall(); });
+  });
+}
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function renderRainMonthlyTable(){
+  const el = document.getElementById('rainMonthlyTable');
+  if(!selectedRainYear){ el.innerHTML = ''; return; }
+  const months = rainMonthlyForYear(selectedRainYear);
+  const max = Math.max(...months, 0.01);
+  el.innerHTML = `<table><tbody>${months.map((m,i)=>`
+    <tr>
+      <td class="name" style="width:60px;">${MONTH_NAMES[i]}</td>
+      <td style="text-align:left;">
+        <div class="month-bar-track"><div class="month-bar-fill" style="width:${(m/max*100).toFixed(0)}%;"></div></div>
+      </td>
+      <td class="readonly" style="width:80px;">${m>0?m.toFixed(2)+'"':'—'}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderRainEntriesTable(){
+  const body = document.getElementById('rainEntriesBody');
+  document.getElementById('rainSelectedYearLabel').textContent = selectedRainYear || '';
+  if(!selectedRainYear){ body.innerHTML = ''; return; }
+  const entries = state.rainfall.filter(e=>e.date.slice(0,4)===selectedRainYear)
+    .slice().sort((a,b)=> b.date.localeCompare(a.date));
+  if(entries.length===0){ body.innerHTML = '<tr><td colspan="3" class="empty">No readings for this year yet.</td></tr>'; return; }
+  body.innerHTML = entries.map(e=>`
+    <tr>
+      <td style="text-align:left;">${dayDateLabel(fromLocalISO(e.date))}</td>
+      <td class="readonly">${(parseFloat(e.inches)||0).toFixed(2)}"</td>
+      <td><button class="wp-icon wp-trash" data-del-rain="${e.id}" title="Delete reading">🗑</button></td>
+    </tr>`).join('');
+  body.querySelectorAll('[data-del-rain]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.delRain;
+      showConfirm('Delete Reading', 'Remove this rainfall reading? This cannot be undone.', ()=>{
+        state.rainfall = state.rainfall.filter(e=>e.id!==id);
+        saveState(); renderRainfall();
+        showToast('Reading deleted.');
+      });
+    });
+  });
+}
+
+function renderRainfall(){
+  const years = rainYears();
+  if(!selectedRainYear || !years.includes(selectedRainYear)){
+    selectedRainYear = years.length ? years[years.length-1] : null;
+  }
+  renderRainYearChart();
+  renderRainYearTabs();
+  renderRainMonthlyTable();
+  renderRainEntriesTable();
+}
+
+document.getElementById('btnAddRain').addEventListener('click', ()=>{
+  const dateEl = document.getElementById('rainDateInput');
+  const inchesEl = document.getElementById('rainInchesInput');
+  const date = dateEl.value;
+  const inches = parseFloat(inchesEl.value);
+  if(!date){ showToast('Pick a date first.'); return; }
+  if(isNaN(inches) || inches < 0){ showToast('Enter a valid amount in inches.'); return; }
+  state.rainfall.push({id:'rain-'+Date.now(), date, inches});
+  dateEl.value = ''; inchesEl.value = '';
+  selectedRainYear = date.slice(0,4);
+  saveState(); renderRainfall();
+  showToast('Reading added.');
+});
+
 function renderAll(){
   renderWeekBadge();
   renderWeekInfoBar();
   renderWeekTable();
   renderHistory();
+  renderRainfall();
   document.getElementById('rateInput').value = (state.interestRate*100);
 }
 
